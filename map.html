@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Looplabs - Safety Map</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B5CF6',
+                        danger: '#EF4444',
+                        safe: '#10B981',
+                        hospital: '#3B82F6',
+                        police: '#1E40AF'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: white;
+        }
+        
+        #map {
+            height: 70vh;
+            width: 100%;
+        }
+        
+        .map-marker {
+            background-color: #8B5CF6;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .hospital-marker {
+            background-color: #3B82F6;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .police-marker {
+            background-color: #1E40AF;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            70% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #8B5CF6;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body class="bg-white">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center">
+                <h1 class="text-2xl font-['Pacifico'] text-primary mr-2">Looplabs</h1>
+                <span class="text-xs bg-primary text-white px-2 py-1 rounded-full">Map</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="currentLocationBtn" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">
+                    <i class="ri-focus-3-line text-gray-600"></i>
+                </button>
+                <button id="refreshDataBtn" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100">
+                    <div id="refreshIcon" class="ri-refresh-line text-gray-600"></div>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4">
+        <!-- Map Container -->
+        <div id="map" class="rounded-lg overflow-hidden shadow-md mb-4"></div>
+        
+        <!-- Map Controls -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">Safety Resources</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="lastUpdated" class="text-xs text-gray-500">Loading data...</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button id="policeBtn" class="flex items-center p-2 bg-blue-50 rounded-lg active-filter">
+                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 mr-2">
+                        <i class="ri-community-line text-blue-800"></i>
+                    </div>
+                    <span class="text-sm">Police Stations</span>
+                </button>
+                
+                <button id="hospitalsBtn" class="flex items-center p-2 bg-blue-50 rounded-lg active-filter">
+                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 mr-2">
+                        <i class="ri-hospital-line text-blue-500"></i>
+                    </div>
+                    <span class="text-sm">Hospitals</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-lg font-semibold mb-3">Emergency Contacts</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="tel:100" class="flex items-center justify-center p-3 bg-blue-800 text-white rounded-lg">
+                    <i class="ri-community-line text-xl mr-2"></i>
+                    <span>Police (100)</span>
+                </a>
+                <a href="tel:108" class="flex items-center justify-center p-3 bg-blue-500 text-white rounded-lg">
+                    <i class="ri-ambulance-line text-xl mr-2"></i>
+                    <span>Ambulance (108)</span>
+                </a>
+                <a href="tel:101" class="flex items-center justify-center p-3 bg-red-500 text-white rounded-lg">
+                    <i class="ri-fire-line text-xl mr-2"></i>
+                    <span>Fire (101)</span>
+                </a>
+                <a href="tel:112" class="flex items-center justify-center p-3 bg-purple-500 text-white rounded-lg">
+                    <i class="ri-emergency-line text-xl mr-2"></i>
+                    <span>Emergency (112)</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-3 sticky bottom-0">
+        <div class="container mx-auto">
+            <div class="flex justify-around">
+                <a href="index.html" class="flex flex-col items-center justify-center px-4 py-1 text-gray-500">
+                    <i class="ri-home-5-line text-xl"></i>
+                    <span class="text-xs mt-1">Home</span>
+                </a>
+                <a href="map.html" class="flex flex-col items-center justify-center px-4 py-1 text-primary">
+                    <i class="ri-map-2-line text-xl"></i>
+                    <span class="text-xs mt-1">Map</span>
+                </a>
+                <a href="network.html" class="flex flex-col items-center justify-center px-4 py-1 text-gray-500">
+                    <i class="ri-group-line text-xl"></i>
+                    <span class="text-xs mt-1">Network</span>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            const map = L.map('map').setView([20.5937, 78.9629], 5); // Default to India
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Variables to store markers and data
+            let userMarker, userCircle;
+            let policeMarkers = [];
+            let hospitalMarkers = [];
+            let currentLocation = null;
+            
+            // Custom icons
+            const userIcon = L.divIcon({
+                className: 'map-marker pulse-animation',
+                iconSize: [24, 24]
+            });
+            
+            const hospitalIcon = L.divIcon({
+                className: 'hospital-marker',
+                html: '<i class="ri-hospital-line text-white text-xs flex items-center justify-center h-full"></i>',
+                iconSize: [24, 24]
+            });
+            
+            const policeIcon = L.divIcon({
+                className: 'police-marker',
+                html: '<i class="ri-community-line text-white text-xs flex items-center justify-center h-full"></i>',
+                iconSize: [24, 24]
+            });
+            
+            // Try to locate user
+            locateUser();
+            
+            // Locate user function
+            function locateUser() {
+                map.locate({setView: true, maxZoom: 14});
+            }
+            
+            // On location found
+            map.on('locationfound', function(e) {
+                currentLocation = e.latlng;
+                const radius = e.accuracy / 2;
+                
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                    map.removeLayer(userCircle);
+                }
+                
+                userMarker = L.marker(e.latlng, { icon: userIcon })
+                    .addTo(map)
+                    .bindPopup("Your location").openPopup();
+                
+                userCircle = L.circle(e.latlng, radius, {
+                    color: '#8B5CF6',
+                    fillColor: '#8B5CF6',
+                    fillOpacity: 0.2
+                }).addTo(map);
+                
+                // Load nearby police stations and hospitals
+                loadNearbyData(e.latlng.lat, e.latlng.lng);
+            });
+            
+            // On location error
+            map.on('locationerror', function(e) {
+                console.error("Location error:", e.message);
+                document.getElementById('lastUpdated').textContent = "Location access denied - showing sample data";
+                
+                // Load sample data for India
+                loadSampleData();
+            });
+            
+            // Load nearby police stations and hospitals from Overpass API
+            function loadNearbyData(lat, lng) {
+                showLoading(true);
+                document.getElementById('lastUpdated').textContent = "Loading data...";
+                
+                // Clear existing markers
+                clearMarkers();
+                
+                // Radius in meters (5km)
+                const radius = 5000;
+                
+                // Overpass API query for police stations
+                const policeQuery = `[out:json];
+                    (
+                        node["amenity"="police"](around:${radius},${lat},${lng});
+                        way["amenity"="police"](around:${radius},${lat},${lng});
+                        relation["amenity"="police"](around:${radius},${lat},${lng});
+                    );
+                    out center;`;
+                
+                // Overpass API query for hospitals
+                const hospitalQuery = `[out:json];
+                    (
+                        node["amenity"="hospital"](around:${radius},${lat},${lng});
+                        way["amenity"="hospital"](around:${radius},${lat},${lng});
+                        relation["amenity"="hospital"](around:${radius},${lat},${lng});
+                    );
+                    out center;`;
+                
+                // Fetch police stations
+                fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(policeQuery)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.elements && data.elements.length > 0) {
+                            data.elements.forEach(item => {
+                                const coords = item.center ? [item.center.lat, item.center.lon] : [item.lat, item.lon];
+                                const marker = L.marker(coords, { icon: policeIcon })
+                                    .addTo(map)
+                                    .bindPopup(`<b>Police Station</b><br>${item.tags?.name || 'Unnamed Police Station'}`);
+                                policeMarkers.push(marker);
+                            });
+                        } else {
+                            console.log("No police stations found in this area");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching police data:", error);
+                    });
+                
+                // Fetch hospitals
+                fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(hospitalQuery)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.elements && data.elements.length > 0) {
+                            data.elements.forEach(item => {
+                                const coords = item.center ? [item.center.lat, item.center.lon] : [item.lat, item.lon];
+                                const marker = L.marker(coords, { icon: hospitalIcon })
+                                    .addTo(map)
+                                    .bindPopup(`<b>Hospital</b><br>${item.tags?.name || 'Unnamed Hospital'}<br>Emergency: 108`);
+                                hospitalMarkers.push(marker);
+                            });
+                        } else {
+                            console.log("No hospitals found in this area");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching hospital data:", error);
+                    })
+                    .finally(() => {
+                        showLoading(false);
+                        document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                    });
+            }
+            
+            // Load sample data when location is not available
+            function loadSampleData() {
+                clearMarkers();
+                
+                // Sample police stations for major Indian cities
+                const samplePolice = [
+                    { name: "Mumbai Police HQ", lat: 19.0728, lng: 72.8826 },
+                    { name: "Delhi Police Station", lat: 28.6139, lng: 77.2090 },
+                    { name: "Bangalore City Police", lat: 12.9716, lng: 77.5946 },
+                    { name: "Hyderabad Police Station", lat: 17.3850, lng: 78.4867 },
+                    { name: "Chennai Central Police", lat: 13.0827, lng: 80.2707 }
+                ];
+                
+                // Sample hospitals for major Indian cities
+                const sampleHospitals = [
+                    { name: "AIIMS Delhi", lat: 28.5675, lng: 77.2111 },
+                    { name: "Apollo Hospital Chennai", lat: 13.0286, lng: 80.2418 },
+                    { name: "KEM Hospital Mumbai", lat: 18.9750, lng: 72.8258 },
+                    { name: "NIMHANS Bangalore", lat: 12.9434, lng: 77.5974 },
+                    { name: "Yashoda Hospital Hyderabad", lat: 17.4366, lng: 78.4437 }
+                ];
+                
+                // Add sample police markers
+                samplePolice.forEach(station => {
+                    const marker = L.marker([station.lat, station.lng], { icon: policeIcon })
+                        .addTo(map)
+                        .bindPopup(`<b>${station.name}</b><br>Emergency: 100`);
+                    policeMarkers.push(marker);
+                });
+                
+                // Add sample hospital markers
+                sampleHospitals.forEach(hospital => {
+                    const marker = L.marker([hospital.lat, hospital.lng], { icon: hospitalIcon })
+                        .addTo(map)
+                        .bindPopup(`<b>${hospital.name}</b><br>Emergency: 108`);
+                    hospitalMarkers.push(marker);
+                });
+                
+                showLoading(false);
+                document.getElementById('lastUpdated').textContent = "Showing sample data - enable location for accurate results";
+            }
+            
+            // Clear all markers
+            function clearMarkers() {
+                policeMarkers.forEach(marker => map.removeLayer(marker));
+                hospitalMarkers.forEach(marker => map.removeLayer(marker));
+                policeMarkers = [];
+                hospitalMarkers = [];
+            }
+            
+            // Toggle markers visibility
+            function toggleMarkers(type, show) {
+                if (type === 'police') {
+                    policeMarkers.forEach(marker => {
+                        if (show) map.addLayer(marker);
+                        else map.removeLayer(marker);
+                    });
+                } else if (type === 'hospital') {
+                    hospitalMarkers.forEach(marker => {
+                        if (show) map.addLayer(marker);
+                        else map.removeLayer(marker);
+                    });
+                }
+            }
+            
+            // Show/hide loading state
+            function showLoading(show) {
+                const refreshIcon = document.getElementById('refreshIcon');
+                if (show) {
+                    refreshIcon.classList.add('hidden');
+                    refreshIcon.insertAdjacentHTML('afterend', '<div id="loadingSpinner" class="loading-spinner"></div>');
+                } else {
+                    document.getElementById('loadingSpinner')?.remove();
+                    refreshIcon.classList.remove('hidden');
+                }
+            }
+            
+            // Button event handlers
+            document.getElementById('currentLocationBtn').addEventListener('click', function() {
+                if (currentLocation) {
+                    map.setView(currentLocation, 14);
+                } else {
+                    locateUser();
+                }
+            });
+            
+            document.getElementById('refreshDataBtn').addEventListener('click', function() {
+                if (currentLocation) {
+                    loadNearbyData(currentLocation.lat, currentLocation.lng);
+                } else {
+                    locateUser();
+                }
+            });
+            
+            document.getElementById('policeBtn').addEventListener('click', function() {
+                this.classList.toggle('active-filter');
+                this.classList.toggle('bg-blue-50');
+                this.classList.toggle('bg-blue-100');
+                toggleMarkers('police', this.classList.contains('active-filter'));
+            });
+            
+            document.getElementById('hospitalsBtn').addEventListener('click', function() {
+                this.classList.toggle('active-filter');
+                this.classList.toggle('bg-blue-50');
+                this.classList.toggle('bg-blue-100');
+                toggleMarkers('hospital', this.classList.contains('active-filter'));
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Looplabs - Personal Safety App</title>
+    <meta name="description" content="Personal safety app with emergency alerts, location sharing, and discreet safety features">
+    <meta name="theme-color" content="#8B5CF6">
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://cdn.tailwindcss.com/3.4.16" as="script">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B5CF6',
+                        secondary: '#F472B6',
+                        danger: '#EF4444',
+                        safe: '#10B981',
+                        warning: '#F59E0B'
+                    },
+                    borderRadius: {
+                        'none': '0px',
+                        'sm': '4px',
+                        DEFAULT: '8px',
+                        'md': '12px',
+                        'lg': '16px',
+                        'xl': '20px',
+                        '2xl': '24px',
+                        '3xl': '32px',
+                        'full': '9999px',
+                        'button': '8px'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <style>
+        :root {
+            --color-primary: 139, 92, 246;
+            --color-secondary: 244, 114, 182;
+            --color-danger: 239, 68, 68;
+            --color-safe: 16, 185, 129;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .logo {
+            font-family: 'Pacifico', cursive;
+        }
+        
+        /* Status indicators */
+        .status-safe {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.4) 100%);
+        }
+        
+        .status-warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.4) 100%);
+        }
+        
+        .status-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.4) 100%);
+        }
+        
+        /* SOS Button */
+        .sos-button {
+            box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+        
+        /* Feature cards */
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Accessibility focus states */
+        button:focus, input:focus, select:focus {
+            outline: 2px solid rgba(var(--color-primary), 0.5);
+            outline-offset: 2px;
+        }
+        
+        /* Emergency countdown */
+        .emergency-countdown {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(239, 68, 68, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        /* Fake call screen */
+        .fake-call-screen {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        /* Animations */
+        @keyframes ring {
+            0% { transform: rotate(-10deg); }
+            100% { transform: rotate(10deg); }
+        }
+        
+        .phone-ring {
+            animation: ring 1s infinite alternate;
+            transform-origin: center;
+        }
+        
+        /* Echo animation for live location */
+        @keyframes echo {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            70% { transform: scale(1.3); opacity: 0; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        
+        .echo-circle {
+            animation: echo 2s infinite;
+        }
+        
+        /* Modal animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Custom switches and checkboxes */
+        .custom-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .custom-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .switch-slider {
+            background-color: rgb(var(--color-primary));
+        }
+        
+        input:checked + .switch-slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Range slider customization */
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: rgb(var(--color-primary));
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #111827;
+                color: #F3F4F6;
+            }
+            
+            .bg-white {
+                background-color: #1F2937 !important;
+            }
+            
+            .text-gray-800 {
+                color: #F3F4F6 !important;
+            }
+            
+            .text-gray-600, .text-gray-500 {
+                color: #9CA3AF !important;
+            }
+            
+            .bg-gray-50 {
+                background-color: #374151 !important;
+            }
+            
+            .border-gray-100 {
+                border-color: #374151 !important;
+            }
+            
+            input[type="range"] {
+                background: #4B5563;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-900">
+    <!-- Emergency Countdown Screen -->
+    <div class="emergency-countdown" id="emergencyCountdown" role="alertdialog" aria-labelledby="emergencyTitle" aria-modal="true">
+        <div class="w-20 h-20 flex items-center justify-center rounded-full bg-white mb-6">
+            <i class="ri-alarm-warning-line text-red-500 text-4xl" aria-hidden="true"></i>
+        </div>
+        <h2 class="text-3xl font-bold mb-2" id="emergencyTitle">EMERGENCY</h2>
+        <p class="text-xl mb-4">Calling emergency services...</p>
+        <div class="countdown-timer text-5xl font-bold my-6" id="countdownTimer">5</div>
+        <div class="emergency-actions flex gap-4">
+            <button class="emergency-btn cancel-btn px-6 py-3 bg-white text-danger rounded-lg font-bold" id="cancelEmergency">
+                Cancel
+            </button>
+            <button class="emergency-btn call-now-btn px-6 py-3 bg-white text-safe rounded-lg font-bold" id="callNow">
+                Call Now
+            </button>
+        </div>
+    </div>
+
+    <!-- Fake Call Screen -->
+    <div id="fakeCallScreen" class="fake-call-screen" role="alertdialog" aria-modal="true">
+        <div class="text-center mb-8">
+            <div id="callerPhoto" class="w-24 h-24 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 phone-ring">
+                <i class="ri-user-3-line text-4xl" aria-hidden="true"></i>
+            </div>
+            <h2 id="callerNameDisplay" class="text-2xl font-semibold mb-1">Mom</h2>
+            <p class="text-lg opacity-80">Calling...</p>
+        </div>
+        <div class="w-full px-8">
+            <div class="flex justify-between mb-6">
+                <div class="text-center">
+                    <button class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 mb-1" aria-label="Mute">
+                        <i class="ri-mic-off-line text-xl" aria-hidden="true"></i>
+                    </button>
+                    <span class="text-xs">Mute</span>
+                </div>
+                <div class="text-center">
+                    <button class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 mb-1" aria-label="Keypad">
+                        <i class="ri-number-1 text-xl" aria-hidden="true"></i>
+                    </button>
+                    <span class="text-xs">Keypad</span>
+                </div>
+                <div class="text-center">
+                    <button class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 mb-1" aria-label="Speaker">
+                        <i class="ri-volume-up-line text-xl" aria-hidden="true"></i>
+                    </button>
+                    <span class="text-xs">Speaker</span>
+                </div>
+            </div>
+            <div class="flex justify-around">
+                <div class="text-center">
+                    <button id="declineCall" class="w-16 h-16 flex items-center justify-center rounded-full bg-red-500 mb-1" aria-label="Decline call">
+                        <i class="ri-phone-off-line text-2xl" aria-hidden="true"></i>
+                    </button>
+                    <span class="text-xs">Decline</span>
+                </div>
+                <div class="text-center">
+                    <button id="answerCall" class="w-16 h-16 flex items-center justify-center rounded-full bg-green-500 mb-1" aria-label="Answer call">
+                        <i class="ri-phone-line text-2xl" aria-hidden="true"></i>
+                    </button>
+                    <span class="text-xs">Answer</span>
+                </div>
+            </div>
+        </div>
+        <audio id="ringtone" loop>
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-phone-ring-1129.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
+            <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full spinner mb-4"></div>
+            <p class="text-lg font-medium" id="loadingText">Processing your request...</p>
+        </div>
+    </div>
+
+    <!-- Permission Request Modal -->
+    <div id="permissionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg w-full max-w-md p-6 animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Permission Required</h3>
+                <button id="closePermissionModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="ri-close-line text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-6" id="permissionMessage">
+                Looplabs needs access to your location to provide safety features. Please grant permission to continue.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button id="denyPermission" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium">
+                    Deny
+                </button>
+                <button id="grantPermission" class="px-4 py-2 bg-primary text-white rounded-lg font-medium">
+                    Allow
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center">
+                <h1 class="text-2xl logo text-primary mr-2">Looplabs</h1>
+                <span class="text-xs bg-primary text-white px-2 py-1 rounded-full">AIML-D</span>
+            </div>
+            <div class="flex items-center space-x-4">
+              
+                <button class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors" aria-label="Settings">
+                    <i class="ri-settings-3-line text-gray-600" aria-hidden="true"></i>
+                </button>
+                <button class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors" aria-label="Profile">
+                    <i class="ri-user-line text-gray-600" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Status Bar -->
+        <div class="status-safe rounded-lg p-4 mb-6 flex items-center justify-between">
+            <div>
+                <div class="flex items-center">
+                    <div class="w-6 h-6 flex items-center justify-center rounded-full bg-safe mr-2">
+                        <i class="ri-shield-check-line text-white text-sm" aria-hidden="true"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-green-800">Safe Status</h2>
+                </div>
+                <p class="text-sm text-green-700 mt-1">
+                    <i class="ri-map-pin-line mr-1" aria-hidden="true"></i>
+                    <span id="currentLocation">Current location:</span>
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center">
+                    <i class="ri-battery-charge-line text-green-600 mr-1" aria-hidden="true"></i>
+                    <span class="text-sm text-green-600">92%</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="ri-wifi-line text-green-600 mr-1" aria-hidden="true"></i>
+                    <span class="text-sm text-green-600">Strong</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Safety Features Grid -->
+        <div class="grid grid-cols-1 gap-4 mb-6">
+            <!-- SOS Button Card -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <!-- Emergency Header -->
+                <div class="bg-danger p-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold">Emergency SOS</h2>
+                        <button id="settingsBtn" class="text-white hover:text-red-200" aria-label="Emergency settings">
+                            <i class="ri-settings-3-line text-xl" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm opacity-90 mt-1">Press and hold for emergency</p>
+                </div>
+              
+                <!-- Main Button -->
+                <div class="p-6">
+                    <div class="relative">
+                        <!-- SOS Button with Weighted Priority Indicator -->
+                        <button id="sosButton" 
+                                class="sos-button w-full h-40 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg flex flex-col items-center justify-center text-white relative overflow-hidden transition-all duration-300 hover:shadow-xl active:scale-[0.98]"
+                                aria-label="Emergency SOS button - press and hold for 3 seconds">
+                            
+                            <!-- Weighted Priority Visualization -->
+                            <div class="absolute top-3 right-3 bg-white text-danger text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                Priority: <span id="priorityScore">9.8</span>/10
+                            </div>
+                            
+                            <!-- Button Content -->
+                            <div class="relative z-10 text-center">
+                                <div class="w-16 h-16 flex items-center justify-center rounded-full bg-white bg-opacity-20 mb-3 backdrop-blur-sm">
+                                    <i class="ri-alarm-warning-line text-3xl text-white" aria-hidden="true"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold mb-1">EMERGENCY</h3>
+                                <p class="text-sm opacity-90">Press & hold for 3 seconds</p>
+                            </div>
+                            
+                            <!-- Active State Overlay -->
+                            <div id="sosOverlay" class="hidden absolute inset-0 bg-red-700 bg-opacity-90 flex items-center justify-center">
+                                <div class="text-center text-white p-4">
+                                    <div class="text-4xl font-bold mb-2" id="countdown">3</div>
+                                    <p class="text-sm mb-4">Contacting emergency services...</p>
+                                    <div class="flex justify-center gap-3">
+                                        <button id="cancelBtn" class="px-4 py-2 bg-white bg-opacity-20 text-white rounded-full text-sm font-medium backdrop-blur-sm hover:bg-opacity-30">
+                                            Cancel
+                                        </button>
+                                        <button id="callNowBtn" class="px-4 py-2 bg-white text-danger rounded-full text-sm font-medium hover:bg-gray-100">
+                                            Call Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <!-- Priority Contacts Visualization -->
+                        <div class="mt-4 flex justify-between items-center text-xs text-gray-500">
+                            <div class="flex items-center">
+                                <i class="ri-shield-star-line text-danger mr-1" aria-hidden="true"></i>
+                                <span>Weighted contacts:</span>
+                            </div>
+                            <div class="flex">
+                                <div class="w-3 h-3 rounded-full bg-red-500 mr-1" title="Police (Priority 10)"></div>
+                                <div class="w-3 h-3 rounded-full bg-red-400 mr-1" title="Family (Priority 8)"></div>
+                                <div class="w-3 h-3 rounded-full bg-red-300" title="Friends (Priority 6)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              
+                <!-- Settings Panel (Hidden) -->
+                <div id="settingsPanel" class="hidden p-4 border-t">
+                    <h3 class="font-medium text-gray-700 mb-3">Emergency Contacts</h3>
+                    
+                    <!-- Priority Contact 1 -->
+                    <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-medium text-gray-700">Primary Contact (Police)</label>
+                            <span class="text-xs bg-red-100 text-danger px-2 py-1 rounded-full">Priority 10</span>
+                        </div>
+                        <input type="tel" id="contact1" value="+911234567890" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Emergency number">
+                        <div class="mt-2 flex items-center">
+                            <input type="checkbox" id="whatsapp1" checked class="mr-2">
+                            <label for="whatsapp1" class="text-sm text-gray-600">Send WhatsApp alert</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Priority Contact 2 -->
+                    <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-medium text-gray-700">Secondary Contact</label>
+                            <span class="text-xs bg-red-100 text-danger px-2 py-1 rounded-full">Priority 8</span>
+                        </div>
+                        <input type="tel" id="contact2" value="+919876543210" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Emergency number">
+                        <div class="mt-2 flex items-center">
+                            <input type="checkbox" id="whatsapp2" checked class="mr-2">
+                            <label for="whatsapp2" class="text-sm text-gray-600">Send WhatsApp alert</label>
+                        </div>
+                    </div>
+                    
+                    <button id="saveSettings" class="w-full bg-danger hover:bg-red-700 text-white py-2 rounded-lg font-medium">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Live Location Card -->
+                <div class="bg-white shadow-md rounded-lg p-6 flex flex-col items-center justify-center h-40 feature-card relative overflow-hidden group cursor-pointer"
+                    id="locationCard" role="button" aria-label="Live location sharing">
+                    <!-- Echo animation elements -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="echo-circle echo-circle-1 absolute w-16 h-16 rounded-full bg-primary bg-opacity-10 opacity-0"></div>
+                        <div class="echo-circle echo-circle-2 absolute w-16 h-16 rounded-full bg-primary bg-opacity-10 opacity-0"></div>
+                    </div>
+                    
+                    <!-- Main content -->
+                    <div class="w-16 h-16 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2 z-10 transition-all duration-300 group-hover:bg-opacity-20">
+                        <i class="ri-share-location-line text-primary text-3xl transition-all duration-300 group-hover:scale-110" id="locationIcon" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800 z-10">Live Location</span>
+                    <span class="text-sm text-gray-600 z-10 text-center" id="locationStatusText">Share your location with trusted contacts</span>
+                    
+                    <!-- Active sharing indicator -->
+                    <div id="activeIndicator" class="hidden absolute top-3 right-3 w-3 h-3 rounded-full bg-safe animate-pulse z-10"></div>
+                </div>
+                
+                <!-- Safety Timer Card -->
+                <div class="bg-white shadow-md rounded-lg p-6 flex flex-col items-center justify-center h-40 feature-card" role="button" aria-label="Safety check-in timer">
+                    <div class="w-16 h-16 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-timer-line text-primary text-3xl" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800">Safety Check-in</span>
+                    <span class="text-sm text-gray-600">Set timer for auto alerts</span>
+                </div>
+                
+                <!-- Incident Report Card -->
+                <div class="bg-white shadow-md rounded-lg p-6 flex flex-col items-center justify-center h-40 feature-card" role="button" aria-label="Report incident">
+                    <div class="w-16 h-16 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-file-warning-line text-primary text-3xl" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800">Report Incident</span>
+                    <span class="text-sm text-gray-600">Document safety concerns</span>
+                </div>
+                
+                <!-- Fake Call Card -->
+                <div class="bg-white shadow-md rounded-lg p-6 flex flex-col items-center justify-center h-40 feature-card" role="button" aria-label="Initiate fake call">
+                    <div class="w-16 h-16 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-phone-incoming-line text-primary text-3xl" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-lg font-bold text-gray-800">Fake Call</span>
+                    <span class="text-sm text-gray-600">Simulate incoming call</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Bar -->
+        <div class="mb-6 overflow-x-auto">
+            <div class="flex space-x-4 py-2" style="min-width: max-content;">
+                <button id="emergencyCallBtn" class="flex flex-col items-center justify-center bg-white shadow-sm rounded-lg p-4 min-w-[100px] rounded-button" aria-label="Emergency call">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 mb-2">
+                        <i class="ri-phone-line text-danger" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 whitespace-nowrap">Emergency Call</span>
+                </button>
+                
+                <button class="flex flex-col items-center justify-center bg-white shadow-sm rounded-lg p-4 min-w-[100px] rounded-button" aria-label="Track journey">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-route-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 whitespace-nowrap">Track Journey</span>
+                </button>
+                
+                <button class="flex flex-col items-center justify-center bg-white shadow-sm rounded-lg p-4 min-w-[100px] rounded-button" aria-label="Record audio">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-mic-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 whitespace-nowrap">Record Audio</span>
+                </button>
+                
+                <button class="flex flex-col items-center justify-center bg-white shadow-sm rounded-lg p-4 min-w-[100px] rounded-button" aria-label="Record video">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-vidicon-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 whitespace-nowrap">Record Video</span>
+                </button>
+                
+                <button id="fakeCallBtn" class="flex flex-col items-center justify-center bg-white shadow-sm rounded-lg p-4 min-w-[100px] rounded-button" aria-label="Initiate fake call">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mb-2">
+                        <i class="ri-phone-incoming-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 whitespace-nowrap">Fake Call</span>
+                </button>
+            </div>
+        </div>
+
+
+
+
+
+        <div class="bg-white shadow-md rounded-lg mb-6 p-5">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Report an Incident</h3>
+            
+            <form id="incidentForm" action="https://formspree.io/f/mjkwgawl" method="POST" novalidate>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="locationInput">Location</label>
+                    <div class="flex">
+                        <input type="text" id="locationInput" name="location" placeholder="Current location" class="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                        <button type="button" class="bg-gray-100 px-4 rounded-r-lg border border-l-0 border-gray-300 !rounded-button" aria-label="Use current location">
+                            <i class="ri-map-pin-line text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="incidentType">Incident Type</label>
+                    <div class="relative">
+                        <select id="incidentType" name="incidentType" class="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent pr-8" required>
+                            <option value="">Select incident type</option>
+                            <option value="harassment">Harassment</option>
+                            <option value="suspicious">Suspicious Activity</option>
+                            <option value="assault">Assault</option>
+                            <option value="theft">Theft</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <i class="ri-arrow-down-s-line text-gray-500"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Describe what happened..." rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required></textarea>
+                </div>
+                
+                <div class="flex items-center mb-5">
+                    <input type="checkbox" id="anonymousReport" name="anonymous" class="custom-checkbox">
+                    <label for="anonymousReport" class="custom-checkbox-label text-sm text-gray-700">Submit report anonymously</label>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium !rounded-button" aria-label="Cancel incident report">Cancel</button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-medium !rounded-button" aria-label="Submit incident report">Submit Report</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Safety Check Features -->
+        <div class="bg-white shadow-md rounded-lg mb-6 p-5">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Safety Check Timer</h3>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Set check-in time (minutes)</label>
+                <div class="flex items-center">
+                    <input type="range" min="5" max="60" value="30" class="w-full h-2 bg-gray-200 rounded-full appearance-none" id="timerRange" aria-label="Set safety check-in time">
+                    <span class="ml-3 text-sm font-medium text-gray-700 min-w-[30px]" id="timerValue">30</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="autoAlert" class="mr-2">
+                    <label for="autoAlert" class="text-sm text-gray-700">Auto-alert if missed</label>
+                </div>
+                <label class="custom-switch">
+                    <input type="checkbox" checked>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="regularReminder" class="mr-2">
+                    <label for="regularReminder" class="text-sm text-gray-700">Set regular reminders</label>
+                </div>
+                <label class="custom-switch">
+                    <input type="checkbox">
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <button id="startTimerBtn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-medium rounded-button">
+                Start Safety Check Timer
+            </button>
+        </div>
+
+        <!-- Emergency Contacts Section -->
+        <div class="bg-white shadow-md rounded-lg mb-6 p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Emergency Contacts</h3>
+                <button id="addContactBtn" class="text-primary hover:text-primary/80" aria-label="Add emergency contact">
+                    <i class="ri-add-line text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="policeCallBtn" class="flex items-center p-3 bg-red-50 rounded-lg rounded-button">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 mr-3">
+                        <i class="ri-phone-line text-danger" aria-hidden="true"></i>
+                    </div>
+                    <div class="text-left">
+                        <h5 class="font-medium text-gray-800">Police</h5>
+                        <p class="text-xs text-gray-500">100</p>
+                    </div>
+                </button>
+                
+                <button id="medicalCallBtn" class="flex items-center p-3 bg-blue-50 rounded-lg rounded-button">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 mr-3">
+                        <i class="ri-hospital-line text-blue-500" aria-hidden="true"></i>
+                    </div>
+                    <div class="text-left">
+                        <h5 class="font-medium text-gray-800">Medical</h5>
+                        <p class="text-xs text-gray-500">108</p>
+                    </div>
+                </button>
+                
+                <button id="fireCallBtn" class="flex items-center p-3 bg-amber-50 rounded-lg rounded-button">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-amber-100 mr-3">
+                        <i class="ri-fire-line text-amber-500" aria-hidden="true"></i>
+                    </div>
+                    <div class="text-left">
+                        <h5 class="font-medium text-gray-800">Fire Dept</h5>
+                        <p class="text-xs text-gray-500">101</p>
+                    </div>
+                </button>
+                
+                <button id="crisisCallBtn" class="flex items-center p-3 bg-purple-50 rounded-lg rounded-button">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-purple-100 mr-3">
+                        <i class="ri-mental-health-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <div class="text-left">
+                        <h5 class="font-medium text-gray-800">Womens Helpline</h5>
+                        <p class="text-xs text-gray-500">8099133331</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Safety Tips Section -->
+        <div class="bg-white shadow-md rounded-lg mb-6 p-5">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Safety Tips</h3>
+            <div class="space-y-3">
+                <div class="flex items-start">
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mr-3">
+                        <i class="ri-lightbulb-flash-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <p class="text-sm text-gray-600">Always share your live location with trusted contacts when traveling alone.</p>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mr-3">
+                        <i class="ri-lightbulb-flash-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <p class="text-sm text-gray-600">Use the fake call feature if you feel uncomfortable in a situation.</p>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary bg-opacity-10 mr-3">
+                        <i class="ri-lightbulb-flash-line text-primary" aria-hidden="true"></i>
+                    </div>
+                    <p class="text-sm text-gray-600">Set safety check-ins for late-night travel or unfamiliar locations.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-3 sticky bottom-0">
+        <div class="container mx-auto">
+            <div class="flex justify-around">
+                <button class="flex flex-col items-center justify-center px-4 py-1 text-primary rounded-button" aria-label="Home">
+                    <i class="ri-home-5-line text-xl" aria-hidden="true"></i>
+                    <span class="text-xs mt-1">Home</span>
+                </button>
+                
+                <!-- Button with page redirection -->
+<a href="map.html" class="flex flex-col items-center justify-center px-4 py-1 text-gray-500 hover:bg-gray-100 transition-colors rounded-button" aria-label="Map">
+    <i class="ri-map-2-line text-xl" aria-hidden="true"></i>
+    <span class="text-xs mt-1">Map</span>
+</a>
+                
+<a href="network.html" class="flex flex-col items-center justify-center px-4 py-1 text-gray-500">
+    <i class="ri-group-line text-xl"></i>
+    <span class="text-xs mt-1">Network</span>
+</a>
+                
+            </div>
+        </div>
+    </footer>
+
+    <!-- Sharing Options Modal -->
+    <div id="sharingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg w-full max-w-md p-6 animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Share Your Location</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-700" aria-label="Close modal">
+                    <i class="ri-close-line text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                <select id="durationSelect" class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="180">3 hours</option>
+                    <option value="360">6 hours</option>
+                    <option value="0">Until turned off</option>
+                </select>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button id="shareWhatsAppBtn" class="bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg flex items-center justify-center">
+                    <i class="ri-whatsapp-line text-xl mr-2" aria-hidden="true"></i> WhatsApp
+                </button>
+                <button id="shareSMSBtn" class="bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center">
+                    <i class="ri-chat-1-line text-xl mr-2" aria-hidden="true"></i> SMS
+                </button>
+                <button id="shareLinkBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg flex items-center justify-center col-span-2">
+                    <i class="ri-links-line text-xl mr-2" aria-hidden="true"></i> Copy Shareable Link
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if on mobile device
+            function isMobileDevice() {
+                return (typeof window.orientation !== "undefined") || 
+                       (navigator.userAgent.indexOf('IEMobile') !== -1);
+            }
+
+            // Check for service worker support
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    }).catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+                });
+            }
+
+            // Check for PWA installation
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // Show install button if needed
+            });
+
+            // DOM Elements
+            const sosButton = document.getElementById('sosButton');
+            const emergencyCountdown = document.getElementById('emergencyCountdown');
+            const countdownTimer = document.getElementById('countdownTimer');
+            const cancelEmergencyBtn = document.getElementById('cancelEmergency');
+            const callNowBtn = document.getElementById('callNow');
+            const fakeCallBtn = document.getElementById('fakeCallBtn');
+            const fakeCallScreen = document.getElementById('fakeCallScreen');
+            const declineCall = document.getElementById('declineCall');
+            const answerCall = document.getElementById('answerCall');
+            const ringtone = document.getElementById('ringtone');
+            const callerNameDisplay = document.getElementById('callerNameDisplay');
+            const callerPhoto = document.getElementById('callerPhoto');
+            const emergencyCallBtn = document.getElementById('emergencyCallBtn');
+            const policeCallBtn = document.getElementById('policeCallBtn');
+            const medicalCallBtn = document.getElementById('medicalCallBtn');
+            const fireCallBtn = document.getElementById('fireCallBtn');
+            const crisisCallBtn = document.getElementById('crisisCallBtn');
+            const locationCard = document.getElementById('locationCard');
+            const sharingModal = document.getElementById('sharingModal');
+            const closeModal = document.getElementById('closeModal');
+            const shareWhatsAppBtn = document.getElementById('shareWhatsAppBtn');
+            const shareSMSBtn = document.getElementById('shareSMSBtn');
+            const shareLinkBtn = document.getElementById('shareLinkBtn');
+            const durationSelect = document.getElementById('durationSelect');
+            const activeIndicator = document.getElementById('activeIndicator');
+            const locationStatusText = document.getElementById('locationStatusText');
+            const locationIcon = document.getElementById('locationIcon');
+            const timerRange = document.getElementById('timerRange');
+            const timerValue = document.getElementById('timerValue');
+            const startTimerBtn = document.getElementById('startTimerBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const permissionModal = document.getElementById('permissionModal');
+            const grantPermission = document.getElementById('grantPermission');
+            const denyPermission = document.getElementById('denyPermission');
+            const closePermissionModal = document.getElementById('closePermissionModal');
+            const permissionMessage = document.getElementById('permissionMessage');
+            const currentLocation = document.getElementById('currentLocation');
+
+            // State variables
+            let watchId = null;
+            let currentPosition = null;
+            let shareUrl = '';
+            let isSharing = false;
+            let countdown;
+            let secondsLeft = 5;
+            let safetyTimer = null;
+            let safetyTimerEnd = null;
+
+            // List of possible fake callers
+            const fakeCallers = [
+                { name: "Mom", icon: "ri-user-3-line", color: "bg-purple-500" },
+                { name: "Dad", icon: "ri-user-3-line", color: "bg-blue-500" },
+                { name: "Sister", icon: "ri-user-3-line", color: "bg-pink-500" },
+                { name: "Brother", icon: "ri-user-3-line", color: "bg-green-500" },
+                { name: "Best Friend", icon: "ri-user-3-line", color: "bg-yellow-500" }
+            ];
+
+            // Initialize the app
+            function initApp() {
+                checkLocationPermission();
+                setupEventListeners();
+                updateTimerDisplay();
+            }
+
+            // Check location permission
+            function checkLocationPermission() {
+                if (navigator.permissions) {
+                    navigator.permissions.query({name:'geolocation'}).then(result => {
+                        if (result.state === 'prompt') {
+                            showPermissionModal('Looplabs needs access to your location to provide safety features. Please grant permission to continue.');
+                        } else if (result.state === 'denied') {
+                            currentLocation.textContent = 'Location permission denied';
+                        }
+                    });
+                }
+            }
+
+            // Show permission modal
+            function showPermissionModal(message) {
+                permissionMessage.textContent = message;
+                permissionModal.classList.remove('hidden');
+            }
+
+            // Hide permission modal
+            function hidePermissionModal() {
+                permissionModal.classList.add('hidden');
+            }
+
+            // Setup all event listeners
+            function setupEventListeners() {
+                // SOS Button - Emergency Call
+                sosButton.addEventListener('click', handleSOSClick);
+                
+                // Emergency countdown buttons
+                cancelEmergencyBtn.addEventListener('click', cancelEmergencySequence);
+                callNowBtn.addEventListener('click', triggerEmergencyNow);
+                
+                // Fake call functionality
+                fakeCallBtn.addEventListener('click', initiateFakeCall);
+                declineCall.addEventListener('click', declineFakeCall);
+                answerCall.addEventListener('click', answerFakeCall);
+                
+                // Emergency call buttons
+                emergencyCallBtn.addEventListener('click', () => makeEmergencyCall('100'));
+                policeCallBtn.addEventListener('click', () => makeEmergencyCall('100'));
+                medicalCallBtn.addEventListener('click', () => makeEmergencyCall('108'));
+                fireCallBtn.addEventListener('click', () => makeEmergencyCall('101'));
+                crisisCallBtn.addEventListener('click', () => makeEmergencyCall('8099133331'));
+                
+                // Location sharing
+                locationCard.addEventListener('click', handleLocationCardClick);
+                closeModal.addEventListener('click', closeSharingModal);
+                shareWhatsAppBtn.addEventListener('click', () => startSharing('whatsapp'));
+                shareSMSBtn.addEventListener('click', () => startSharing('sms'));
+                shareLinkBtn.addEventListener('click', copyShareableLink);
+                
+                // Safety timer
+                timerRange.addEventListener('input', updateTimerDisplay);
+                startTimerBtn.addEventListener('click', startSafetyTimer);
+                
+                // Permission modal
+                grantPermission.addEventListener('click', requestLocationPermission);
+                denyPermission.addEventListener('click', hidePermissionModal);
+                closePermissionModal.addEventListener('click', hidePermissionModal);
+            }
+
+            // Handle SOS button click
+            function handleSOSClick(e) {
+                if (!isMobileDevice()) {
+                    e.preventDefault();
+                    alert("On a mobile device, this would initiate an emergency call to 100");
+                    return;
+                }
+                
+                showLoading("Preparing emergency alert...");
+                
+                // Check location permission first
+                if (navigator.permissions) {
+                    navigator.permissions.query({name:'geolocation'}).then(result => {
+                        if (result.state === 'granted') {
+                            startEmergencySequence();
+                        } else {
+                            showPermissionModal('Emergency features require location access to share your position with responders.');
+                        }
+                    });
+                } else {
+                    startEmergencySequence();
+                }
+            }
+
+            // Start emergency sequence
+            function startEmergencySequence() {
+                hideLoading();
+                emergencyCountdown.style.display = "flex";
+                secondsLeft = 5;
+                countdownTimer.textContent = secondsLeft;
+                
+                // Start countdown
+                countdown = setInterval(function() {
+                    secondsLeft--;
+                    countdownTimer.textContent = secondsLeft;
+                    
+                    if (secondsLeft <= 0) {
+                        clearInterval(countdown);
+                        initiateEmergencyCall();
+                    }
+                }, 1000);
+                
+                // Vibrate device if supported
+                if (navigator.vibrate) {
+                    navigator.vibrate([500, 100, 500, 100, 500]);
+                }
+            }
+
+            // Cancel emergency sequence
+            function cancelEmergencySequence() {
+                clearInterval(countdown);
+                emergencyCountdown.style.display = "none";
+                
+                // Stop vibration
+                if (navigator.vibrate) {
+                    navigator.vibrate(0);
+                }
+            }
+
+            // Trigger emergency now
+            function triggerEmergencyNow() {
+                clearInterval(countdown);
+                initiateEmergencyCall();
+            }
+
+            // Initiate emergency call
+            function initiateEmergencyCall() {
+                emergencyCountdown.style.display = "none";
+                
+                // In a real app, this would call emergency services and share location
+                showLoading("Connecting to emergency services...");
+                
+                // Simulate API call
+                setTimeout(() => {
+                    hideLoading();
+                    if (isMobileDevice()) {
+                        window.location.href = 'tel:100';
+                    } else {
+                        alert("Emergency call would be placed to 100 with your location shared");
+                    }
+                }, 1500);
+            }
+
+            // Make emergency call
+            function makeEmergencyCall(number) {
+                if (!isMobileDevice()) {
+                    alert(`On a mobile device, this would call ${number}`);
+                    return;
+                }
+                
+                showLoading(`Calling ${number}...`);
+                
+                // Simulate slight delay for UX
+                setTimeout(() => {
+                    hideLoading();
+                    window.location.href = `tel:${number}`;
+                }, 800);
+            }
+
+            // Initiate fake call
+            function initiateFakeCall() {
+                // Select a random caller
+                const randomCaller = fakeCallers[Math.floor(Math.random() * fakeCallers.length)];
+                callerNameDisplay.textContent = randomCaller.name;
+                callerPhoto.className = `w-24 h-24 ${randomCaller.color} rounded-full flex items-center justify-center mx-auto mb-4 phone-ring`;
+                callerPhoto.innerHTML = `<i class="${randomCaller.icon} text-4xl"></i>`;
+
+                // Show the fake call screen
+                fakeCallScreen.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+
+                // Play ringtone
+                ringtone.play().catch(e => console.log("Auto-play prevented:", e));
+            }
+
+            // Decline fake call
+            function declineFakeCall() {
+                fakeCallScreen.style.display = 'none';
+                document.body.style.overflow = '';
+                ringtone.pause();
+                ringtone.currentTime = 0;
+            }
+
+            // Answer fake call
+            function answerFakeCall() {
+                // Change to call in progress UI
+                callerPhoto.classList.remove('phone-ring');
+                callerNameDisplay.nextElementSibling.textContent = "00:05";
+                answerCall.innerHTML = '<i class="ri-phone-off-line text-2xl"></i>';
+                answerCall.previousElementSibling.previousElementSibling.textContent = "End";
+
+                // Stop ringtone
+                ringtone.pause();
+                ringtone.currentTime = 0;
+
+                // After 5 seconds, end call automatically
+                setTimeout(() => {
+                    fakeCallScreen.style.display = 'none';
+                    document.body.style.overflow = '';
+                }, 5000);
+            }
+
+            // Handle location card click
+            function handleLocationCardClick() {
+                if (!isSharing) {
+                    sharingModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    stopSharing();
+                }
+            }
+
+            // Close sharing modal
+            function closeSharingModal() {
+                sharingModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            // Start sharing location
+            function startSharing(method) {
+                const duration = parseInt(durationSelect.value);
+                
+                if (navigator.geolocation) {
+                    showLoading("Getting your location...");
+                    
+                    // First get current position
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            currentPosition = position;
+                            shareUrl = generateShareUrl(position, duration);
+                            
+                            // Start watching position
+                            watchId = navigator.geolocation.watchPosition(
+                                updateLocation,
+                                handleLocationError,
+                                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+                            );
+                            
+                            // Show active state
+                            isSharing = true;
+                            locationCard.classList.add('active-sharing');
+                            activeIndicator.classList.remove('hidden');
+                            locationStatusText.textContent = 'Sharing live location';
+                            locationIcon.classList.remove('ri-share-location-line');
+                            locationIcon.classList.add('ri-map-pin-2-fill');
+                            
+                            // Open sharing method
+                            if (method === 'whatsapp') {
+                                shareViaWhatsApp(position, duration);
+                            } else if (method === 'sms') {
+                                shareViaSMS(position, duration);
+                            }
+                            
+                            // Close modal
+                            closeSharingModal();
+                            hideLoading();
+                            
+                            // If duration is set, auto-stop after that time
+                            if (duration > 0) {
+                                setTimeout(stopSharing, duration * 60 * 1000);
+                            }
+                        },
+                        error => {
+                            handleLocationError(error);
+                            hideLoading();
+                        }
+                    );
+                } else {
+                    alert('Geolocation is not supported by your browser.');
+                }
+            }
+
+            // Stop sharing location
+            function stopSharing() {
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                
+                isSharing = false;
+                locationCard.classList.remove('active-sharing');
+                activeIndicator.classList.add('hidden');
+                locationStatusText.textContent = 'Share with contacts';
+                locationIcon.classList.remove('ri-map-pin-2-fill');
+                locationIcon.classList.add('ri-share-location-line');
+                
+                showAlert('Live location sharing has been stopped.');
+            }
+
+            // Update location
+            function updateLocation(position) {
+                currentPosition = position;
+                // In a real app, you would send this to your backend
+                console.log('Location updated:', position.coords.latitude, position.coords.longitude);
+                currentLocation.textContent = `Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+            }
+
+            // Handle location error
+            function handleLocationError(error) {
+                console.error('Geolocation error:', error);
+                let message = 'Error getting location: ';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message += 'Location permission denied.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message += 'Location information unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        message += 'Location request timed out.';
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        message += 'An unknown error occurred.';
+                        break;
+                }
+                
+                showAlert(message);
+            }
+
+            // Generate share URL
+            function generateShareUrl(position, duration) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                return `https://maps.google.com/?q=${lat},${lng}&live=${duration}`;
+            }
+
+            // Share via WhatsApp
+            function shareViaWhatsApp(position, duration) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const durationText = duration === 0 ? 'indefinitely' : `for ${duration} minutes`;
+                const text = `I'm sharing my live location with you ${durationText}: ${generateShareUrl(position, duration)}`;
+                
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    // Mobile devices
+                    window.location.href = `whatsapp://send?text=${encodeURIComponent(text)}`;
+                } else {
+                    // Desktop
+                    window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            }
+
+            // Share via SMS
+            function shareViaSMS(position, duration) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const durationText = duration === 0 ? 'indefinitely' : `for ${duration} minutes`;
+                const text = `My live location: ${generateShareUrl(position, duration)} (shared ${durationText})`;
+                
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    // Mobile devices
+                    window.location.href = `sms:?body=${encodeURIComponent(text)}`;
+                } else {
+                    // Desktop fallback
+                    alert('SMS sharing is only available on mobile devices. Here is your shareable link:\n\n' + text);
+                }
+            }
+
+            // Copy shareable link
+            function copyShareableLink() {
+                if (shareUrl) {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        showAlert('Shareable link copied to clipboard!');
+                        closeSharingModal();
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        showAlert('Failed to copy link. Please try again.');
+                    });
+                }
+            }
+
+            // Update timer display
+            function updateTimerDisplay() {
+                timerValue.textContent = timerRange.value;
+            }
+
+            // Start safety timer
+            function startSafetyTimer() {
+                const minutes = parseInt(timerRange.value);
+                const ms = minutes * 60 * 1000;
+                
+                showLoading(`Safety timer set for ${minutes} minutes`);
+                
+                // Clear existing timer if any
+                if (safetyTimer) {
+                    clearTimeout(safetyTimer);
+                }
+                
+                // Set new timer
+                safetyTimerEnd = new Date(Date.now() + ms);
+                safetyTimer = setTimeout(() => {
+                    handleSafetyTimerEnd();
+                }, ms);
+                
+                // Update UI
+                setTimeout(() => {
+                    hideLoading();
+                    showAlert(`Safety timer started. You will be checked on in ${minutes} minutes.`);
+                }, 1000);
+            }
+
+            // Handle safety timer end
+            function handleSafetyTimerEnd() {
+                showAlert('Safety check-in time elapsed!');
+                
+                // If auto-alert is enabled, trigger emergency sequence
+                const autoAlert = document.getElementById('autoAlert').checked;
+                if (autoAlert) {
+                    startEmergencySequence();
+                }
+            }
+
+            // Request location permission
+            function requestLocationPermission() {
+                hidePermissionModal();
+                showLoading("Requesting location permission...");
+                
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        hideLoading();
+                        currentPosition = position;
+                        currentLocation.textContent = `Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                        showAlert("Location access granted. Safety features are now enabled.");
+                    },
+                    error => {
+                        hideLoading();
+                        handleLocationError(error);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            }
+
+            // Show loading overlay
+            function showLoading(message) {
+                loadingText.textContent = message;
+                loadingOverlay.classList.remove('hidden');
+            }
+
+            // Hide loading overlay
+            function hideLoading() {
+                loadingOverlay.classList.add('hidden');
+            }
+
+            // Show alert message
+            function showAlert(message) {
+                // In a real app, use a proper notification system
+                alert(message);
+            }
+
+            // Initialize the app
+            initApp();
+        });
+    </script>
+</body>
+</html>
